@@ -1,5 +1,8 @@
 
 # Drawbot ✏️
+This project will soon be replaced by my complete own build -> Drewie with a new control software and all hardware parts.
+https://github.com/captFuture/Drewie
+
 
 Drawing robot capable of drawing SVG paths. Powered by a Raspberry Pi running Node.js.
 This project is heavily inspired by https://github.com/andywise/drawbot and several other wall hanging drawing robots
