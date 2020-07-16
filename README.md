@@ -1,7 +1,7 @@
 
 # Drawbot ✏️
 
-Drawing robot capable of rendering SVG paths over WebSockets. Powered by a Raspberry Pi running Node.js.
+Drawing robot capable of drawing SVG paths. Powered by a Raspberry Pi running Node.js.
 This project is heavily inspired by https://github.com/andywise/drawbot and several other wall hanging drawing robots
 
 ## Parts List
@@ -10,12 +10,11 @@ If you want to build one on your own, check out the readme of andywises reposito
 ### Printable Parts
 
 ### Everything Else
-The Stepper controllers used are doing 1/8 microstepping by default (took me a while till i found this out)
+The Stepper controllers currently are closed loop Steppers from Makerbase. 
 As i have a slightly different hardware, the circumfence of my spools - therefore i had to change the mm per step value in config.json  ("stepsPerMM": [ )
 
 SVG HINTS:
-The whole artwork should be in one group
-Text has to be converted to paths
+
 
 INKSCAPE HINTS:
 Export with ABSOLUTE path format: Settings > Iput/output > SVG-output...
@@ -29,10 +28,10 @@ Units should always be PIXELS -> the drawbot makes 1px to 1mm
 
 ## Hardware Assembly
 
-Instead of using a Raspberry Pi zero W i decided to go for a 3B+ because manipulating and rendering complex svg paths in nodeJS is almost impossible on a zero w
+Instead of using a Raspberry Pi zero W i decided to go for a Pi4 1GB because manipulating and rendering complex svg paths in nodeJS is almost impossible on a zero w
 -> pinouts and wiring are different here (wiring jpg to be updated)
 
-## Raspberry Pi 3B+ Setup
+## Raspberry Pi Setup
 1. **Download and install [Etcher](https://etcher.io/)**.
 2. **Download and install latest [Raspbian OS](https://www.raspberrypi.org/downloads/raspbian/)** and flash it onto your SD card with Etcher.
 3. **Enable SSH** by adding a blank file named `ssh` (no extension) to the `boot` directory on the Pi's SD card. (Last tested with Raspbian Stretch Lite 2018-06-27 version.)
