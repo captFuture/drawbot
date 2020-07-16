@@ -219,15 +219,16 @@ function crossHair(x,y,pen) {
     posctx.stroke();
 }
 
-  multiplierTenButton.addEventListener('click', function(e) {
-    toggleMultiplier(100);
-  });
   multiplierOneButton.addEventListener('click', function(e) {
     toggleMultiplier(10);
   });
-  multiplierOnehundredButton.addEventListener('click', function(e) {
-    toggleMultiplier(1000);
+  multiplierTenButton.addEventListener('click', function(e) {
+    toggleMultiplier(106);
   });
+  multiplierOnehundredButton.addEventListener('click', function(e) {
+    toggleMultiplier(1067);
+  });
+
 
   function toggleMultiplier(amount = 1){
     //console.log(amount)
