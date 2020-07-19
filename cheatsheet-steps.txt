@@ -1,0 +1,15 @@
+Steps per mm
+
+200 steps per rev
+200/360 = 0,5555555555555556 steps/deg
+
+Radius= 23.873
+Durchmesser: 47.746
+Umfang: 150
+Flächeninhalt: 1790.457
+
+Umfang 150mm
+
+1600steps = 360deg = 150mm
+1600 / 150 = 10,66666666666667 steps/mm
+
