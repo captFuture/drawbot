@@ -3,6 +3,7 @@
   "swapDirections": false,
   "localPort": 80,
   "baseDelay": 1,
+  "motorSpeed":1000,
   "d": 980,
   "drawingScale": 100,
   "startPos": {

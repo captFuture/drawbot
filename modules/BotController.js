@@ -15,6 +15,8 @@ const {parseSVG, makeAbsolute} = require('svg-path-parser');
 var arcToBezier = require('./arcToBezier');
 var svgpath = require('svgpath');
 
+const {spawn} = require('child_process')
+
 var currentX = 0;
 var currentY = 0;
 var cmdIndex = 0;
@@ -35,6 +37,8 @@ var BotController = (cfg) => {
     bc._D = config.d                        // || 1000// default distance between string starts
     bc.drawingScale = config.drawingScale   // || defaults to 100%
     bc.startPos = config.startPos           // || { x: 100, y: 100 }
+
+    bc.motorSpeed = config.motorSpeed       // || 1000
 
     bc.stepsPerMM = config.stepsPerMM       // || [5000/500, 5000/500] // steps / mm
     bc.penPause = config.penPauseDelay      // || 200 // pause for pen up/down movement (in ms)
@@ -279,8 +283,53 @@ var BotController = (cfg) => {
         doStep()
     }
 
+
+
+
+
+
+
+    bc.rotateBothPython = (lsteps, rsteps, ldir, rdir, callback) => {
+        // moveBot(lmot, rmot, speed)
+        //console.log('--------------------  bc.rotateBothPython: ', lsteps, rsteps, ldir, rdir)
+
+        // make steps positive or negative for movement
+        if(ldir == 0){
+            lsteps = lsteps*-1;
+        }else if(ldir == 1){
+            lsteps = lsteps;
+        }
+
+        if(rdir == 0){
+            rsteps = rsteps*-1;
+        }else if(rdir == 1){
+            rsteps = rsteps;
+        }
+        if(lsteps == -0){lsteps = 0};
+        if(rsteps == -0){rsteps = 0};
+                
+            console.log('moveBot(', lsteps, rsteps, bc.motorSpeed, ')');
+            function moveBot(lmot, rmot, speed){
+                return spawn('python', ["-u", path.join(__dirname, 'python-motordriver/motorTest.py'), lmot, rmot, speed]);
+            }
+       
+            const subprocess = moveBot(lsteps,rsteps,bc.motorSpeed);
+            
+            subprocess.stdout.on('data', (data) => {
+                console.log(`data:${data}`);
+            });
+            subprocess.stderr.on('data', (data) => {
+                console.log(`error:${data}`);
+            });
+            subprocess.stderr.on('close', () => {
+                //console.log("Closed");
+                if (callback != undefined) callback()
+            });
+    }    
+
+
     // bc.rotate is only used for manual positioning via gui
-    bc.rotate = (motorIndex, dirIndex, delay, steps, callback) => {
+    /*bc.rotate = (motorIndex, dirIndex, delay, steps, callback) => {
          console.log('bc.rotate',motorIndex, dirIndex, delay, steps)
         bc.stepCounts[motorIndex] = Math.round(steps)
         bc.steppeds[motorIndex] = 0
@@ -301,9 +350,57 @@ var BotController = (cfg) => {
             }
         }
         doStep(delay, motorIndex) //executed once when bc.rotate is called
+    }*/
+
+
+    bc.rotate = (motorIndex, dirIndex,delay,steps,callback) => {
+        console.log('bc.rotate',motorIndex, dirIndex, delay, steps)
+        function moveBot(lmot, rmot, speed){
+            return spawn('python', ["-u", path.join(__dirname, 'python-motordriver/motorTest.py'), lmot, rmot, speed]);
+         }
+
+        if(motorIndex == 0){
+            if(dirIndex == 0){
+                steps = steps*-1;
+            }else if(dirIndex ==1){
+                steps = steps;
+            }
+            console.log('moveBot(', 0, steps, bc.motorSpeed, ')');
+            const subprocess = moveBot(steps,0,bc.motorSpeed);
+            subprocess.stdout.on('data', (data) => {
+            console.log(`data:${data}`);
+            });
+            subprocess.stderr.on('data', (data) => {
+            console.log(`error:${data}`);
+            });
+            subprocess.stderr.on('close', () => {
+            //console.log("Closed");
+            if (callback != undefined) callback()
+            });
+
+        }else if(motorIndex == 1){
+            if(dirIndex == 0){
+                steps = steps*-1;
+            }else if(dirIndex ==1){
+                steps = steps;
+            }
+            console.log('moveBot(', steps, 0, bc.motorSpeed, ')');
+            const subprocess = moveBot(0,steps,bc.motorSpeed);
+            subprocess.stdout.on('data', (data) => {
+            console.log(`data:${data}`);
+            });
+            subprocess.stderr.on('data', (data) => {
+            console.log(`error:${data}`);
+            });
+            subprocess.stderr.on('close', () => {
+            //console.log("Closed");
+            if (callback != undefined) callback()
+            });
+
+        }
     }
 
-    //////////////////// END TODO: change this to a wave function with pigpio
+    //////////////////// END TODO:
 
     /////////////////////////////////
     // DRAWING METHODS
@@ -379,8 +476,8 @@ var BotController = (cfg) => {
 
         function doRotation() {
             // do the rotation!
-            bc.rotateBoth(ssteps1, ssteps2, sdir1, sdir2, callback)
-
+            //bc.rotateBoth(ssteps1, ssteps2, sdir1, sdir2, callback)
+            bc.rotateBothPython(ssteps1, ssteps2, sdir1, sdir2, callback)
             // store new current steps
             bc.currentSteps[0] = s1
             bc.currentSteps[1] = s2
