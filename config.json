@@ -2,20 +2,20 @@
   "botID": "drawbot",
   "swapDirections": false,
   "localPort": 80,
-  "baseDelay": 1,
-  "d": 970,
+  "baseDelay": 0,
+  "d": 980,
   "drawingScale": 100,
   "startPos": {
-    "x": 200,
-    "y": 325
+    "x": 198,
+    "y": 310
   },
   "stepsPerMM": [
-    10,
-    10
+    10.6,
+    10.6
   ],
   "servo": {
-    "Min": 1600,
-    "Max": 2000,
+    "Min": 1300,
+    "Max": 1900,
     "swap": true
   },
   "penPauseDelay": 100,
