@@ -3,12 +3,14 @@
   "swapDirections": false,
   "localPort": 80,
   "baseDelay": 1,
-  "motorSpeed":1000,
-  "d": 980,
+  "serialport": "COM6",
+  "motorSpeed":2000,
+  "accelSpeed":2000,
+  "d": 990,
   "drawingScale": 100,
   "startPos": {
-    "x": 200,
-    "y": 310
+    "x": 210,
+    "y": 318
   },
   "stepsPerMM": [
     10.6,
@@ -34,7 +36,7 @@
     "btnThree": 24
   },
   "limits": {
-    "x": 480,
-    "y": 600
+    "x": 600,
+    "y": 800
   }
 }

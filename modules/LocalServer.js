@@ -31,7 +31,7 @@ var LocalServer = (cfg, controller) => {
         })
 
         socket.on('r', function (data) {
-            c.rotate(Number(data.m), Number(data.dir), Number(data.d), Number(data.steps))
+            c.rotateESP(Number(data.m), Number(data.dir), Number(data.d), Number(data.steps))
             //console.log(data.d, Number(data.x), Number(data.y))
             //c.moveRelative(data.x, data.y)
         })

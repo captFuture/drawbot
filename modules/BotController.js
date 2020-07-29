@@ -17,10 +17,6 @@ var svgpath = require('svgpath');
 
 const SerialPort = require('serialport')
 const Readline = require('@serialport/parser-readline')
-const port = new SerialPort('/dev/USB0', {
-  baudRate: 57600
-})
-
 
 var currentX = 0;
 var currentY = 0;
@@ -44,6 +40,7 @@ var BotController = (cfg) => {
     bc.startPos = config.startPos           // || { x: 100, y: 100 }
 
     bc.motorSpeed = config.motorSpeed       // || 1000
+    bc.accelSpeed = config.accelSpeed       // || 1000
 
     bc.stepsPerMM = config.stepsPerMM       // || [5000/500, 5000/500] // steps / mm
     bc.penPause = config.penPauseDelay      // || 200 // pause for pen up/down movement (in ms)
@@ -78,6 +75,7 @@ var BotController = (cfg) => {
 
         // set up servo GPIO pin
         var servo = new Gpio(config.pins.penServo, gmOut)
+
     } else {
         // Setup for debugging if not running on a raspberry
         var gmOut = { mode: "localdebug" }
@@ -85,7 +83,15 @@ var BotController = (cfg) => {
         var stepPins = [config.pins.leftStep, config.pins.rightStep]
         var servo = config.pins.penServo
         var logicPins = [config.pins.leftDriver, config.pins.rightDriver]
+
+
     }
+
+    const port = new SerialPort(config.serialport, {baudRate: 57600, function (err) {
+        if (err) {
+          return console.log('Error: ', err.message)
+        }
+    }})
 
     /////////////////////////////////
     // CONTROLLER VARIABLES
@@ -223,9 +229,9 @@ var BotController = (cfg) => {
 
     bc.rotateBothESP = (lsteps, rsteps, ldir, rdir, callback) => {
         // make steps positive or negative for movement
-        if(ldir == 0){
+        if(ldir == 1){
             lsteps = lsteps*-1;
-        }else if(ldir == 1){
+        }else if(ldir == 0){
             lsteps = lsteps;
         }
 
@@ -237,204 +243,56 @@ var BotController = (cfg) => {
         if(lsteps == -0){lsteps = 0};
         if(rsteps == -0){rsteps = 0};
                 
-        console.log('moveBot(', lsteps, rsteps, bc.motorSpeed, bc.motorSpeed, ')');
-        if (callback != undefined) callback();
+        console.log('moveBot(', lsteps, rsteps, bc.motorSpeed, bc.accelSpeed, ')');
+
+        let serialString = 'move '+lsteps+' '+rsteps+' '+bc.motorSpeed+' '+bc.accelSpeed+'\n';
+        /*port.write(serialString, function(err) {
+            if (err) {
+              return console.log('Error on write: ', err.message)
+            }
+            //console.log('moved: '+serialString);
+        })*/
+
     }
     
     bc.rotateESP = (motorIndex, dirIndex, delay, steps, callback) => {
 
-        if(motorIndex == 0){
+        if(motorIndex == 1){ // right Motor
             if(dirIndex == 0){
                 steps = steps*-1;
-            }else if(dirIndex ==1){
+            }else if(dirIndex == 1){
                 steps = steps;
             }
-            console.log('moveBot(', 0, steps, bc.motorSpeed, ')');
-            
+            //console.log('moveBot(', 0, steps, bc.motorSpeed, bc.accelSpeed, ')');
+            console.log("rightMotor");
+            let serialString = 'move '+'0 '+steps+' '+bc.motorSpeed+' '+bc.accelSpeed+'\n';
+            port.write(serialString, function(err) {
+                if (err) {
+                  return console.log('Error on write: ', err.message)
+                }
+                console.log('> '+serialString);
+            })
 
-        }else if(motorIndex == 1){
-            if(dirIndex == 0){
+        }else if(motorIndex == 0){ // left Motor
+            if(dirIndex == 1){
                 steps = steps*-1;
-            }else if(dirIndex ==1){
+            }else if(dirIndex == 0){
                 steps = steps;
             }
-            console.log('moveBot(', steps, 0, bc.motorSpeed, ')');
+            //console.log('moveBot(', steps, 0, bc.motorSpeed,bc.motorSpeed, ')');
+            console.log("leftMotor");
+            let serialString = 'move '+steps+' '+'0 '+bc.motorSpeed+' '+bc.accelSpeed+'\n';
             
+            port.write(serialString, function(err) {
+                if (err) {
+                  return console.log('Error on write: ', err.message)
+                }
+                console.log('> '+serialString);
+            })
+
         }
     }
     
-    // bc.rotateBoth takes the calculated steps and moves both motors
-    // when both are finished the callback tells the function doRotation to go on (s1 and s2 are then taken)
-    
-    bc.rotateBoth = (s1, s2, d1, d2, callback) => {
-        console.log('--------------------  bc.rotateBoth: ', s1, s2, d1, d2)
-        var steps = Math.round(Math.max(s1, s2))        // use biggest number of steps
-        var minsteps = Math.round(Math.min(s1, s2))     
-
-        if (isPi()) {
-
-        } else {
-            bc.baseDelay = 0;
-        }
-
-        // the motor with the bigger step number always rotates and the one with the smaller rotates every (steps/minsteps)th time
-
-        var a1 = 0                                      // counter for steps on motor 1
-        var a2 = 0                                      // counter for steps on motor 2
-        var stepped = 0
- 
-        var doStep = function () {
-            if (bc.paused != true) {
-                setTimeout(function () {
-                    //console.log("stepped: "+ stepped+" | steps: "+steps);
-                    if (stepped < steps) { // this synchronizes movement between both motors
-                        stepped++
-                        //console.log("a1: "+a1+" | a2: "+a2);
-
-                        a1 += s1            // add steps to do to the counter
-                        if(a1>=steps){      // rotates only if counter is bigger or equal biggest number of steps
-                            a1 -= steps     // subtract biggest number of steps from counter
-                            bc.makeStep(0,d1)   //do a step on motor
-                        }
-
-                        a2 += s2            // add steps to do to the counter
-                        if(a2>=steps){      // rotates only if counter is bigger or equal biggest number of steps
-                            a2 -= steps     // subtract biggest number of steps from counter
-                            bc.makeStep(1,d2) //do a step on motor
-                        }
-                        doStep()
-                    } else {
-                        //console.log('-------------------- bc.rotateBoth done!')
-                        if (callback != undefined) callback()
-                    }
-                }, bc.baseDelay)
-            } else {
-                // paused!
-                console.log('paused!'); console.log(bc.paused);
-                //bc.paused = false
-                //console.log('paused?'); console.log(bc.paused);
-            }
-        }
-        doStep()
-    }
-
-
-
-
-
-
-
-    bc.rotateBothPython = (lsteps, rsteps, ldir, rdir, callback) => {
-        // moveBot(lmot, rmot, speed)
-        //console.log('--------------------  bc.rotateBothPython: ', lsteps, rsteps, ldir, rdir)
-
-        // make steps positive or negative for movement
-        if(ldir == 0){
-            lsteps = lsteps*-1;
-        }else if(ldir == 1){
-            lsteps = lsteps;
-        }
-
-        if(rdir == 0){
-            rsteps = rsteps*-1;
-        }else if(rdir == 1){
-            rsteps = rsteps;
-        }
-        if(lsteps == -0){lsteps = 0};
-        if(rsteps == -0){rsteps = 0};
-                
-            console.log('moveBot(', lsteps, rsteps, bc.motorSpeed, ')');
-            function moveBot(lmot, rmot, speed){
-                return spawn('python', ["-u", path.join(__dirname, 'python-motordriver/motorTest.py'), lmot, rmot, speed]);
-            }
-       
-            const subprocess = moveBot(lsteps,rsteps,bc.motorSpeed);
-            
-            subprocess.stdout.on('data', (data) => {
-                console.log(`data:${data}`);
-            });
-            subprocess.stderr.on('data', (data) => {
-                console.log(`error:${data}`);
-            });
-            subprocess.stderr.on('close', () => {
-                //console.log("Closed");
-                if (callback != undefined) callback()
-            });
-    }    
-
-
-    // bc.rotate is only used for manual positioning via gui
-    /*bc.rotate = (motorIndex, dirIndex, delay, steps, callback) => {
-         console.log('bc.rotate',motorIndex, dirIndex, delay, steps)
-        bc.stepCounts[motorIndex] = Math.round(steps)
-        bc.steppeds[motorIndex] = 0
-        // var dir = (dirIndex==1) ? 0 : 1// reverses direction
-
-        // doStep, then wait for delay d
-        var doStep = function (d, m) {
-            bc.makeStep(m, dirIndex)// changed to dirIndex from dir
-            bc.steppeds[m]++
-            if (bc.steppeds[m] < bc.stepCounts[m]) {
-                setTimeout(function () {
-                    // console.log(m, bc.steppeds[m], "/", bc.stepCounts[m], d*bc.steppeds[m], "/", bc.stepCounts[m]*d)
-                    doStep(d, m)
-                }, d)
-            } else {
-                // done
-                if (callback != undefined) callback()
-            }
-        }
-        doStep(delay, motorIndex) //executed once when bc.rotate is called
-    }*/
-
-
-    bc.rotate = (motorIndex, dirIndex,delay,steps,callback) => {
-        console.log('bc.rotate',motorIndex, dirIndex, delay, steps)
-        function moveBot(lmot, rmot, speed){
-            return spawn('python', ["-u", path.join(__dirname, 'python-motordriver/motorTest.py'), lmot, rmot, speed]);
-         }
-
-        if(motorIndex == 0){
-            if(dirIndex == 0){
-                steps = steps*-1;
-            }else if(dirIndex ==1){
-                steps = steps;
-            }
-            console.log('moveBot(', 0, steps, bc.motorSpeed, ')');
-            const subprocess = moveBot(steps,0,bc.motorSpeed);
-            subprocess.stdout.on('data', (data) => {
-            console.log(`data:${data}`);
-            });
-            subprocess.stderr.on('data', (data) => {
-            console.log(`error:${data}`);
-            });
-            subprocess.stderr.on('close', () => {
-            //console.log("Closed");
-            if (callback != undefined) callback()
-            });
-
-        }else if(motorIndex == 1){
-            if(dirIndex == 0){
-                steps = steps*-1;
-            }else if(dirIndex ==1){
-                steps = steps;
-            }
-            console.log('moveBot(', steps, 0, bc.motorSpeed, ')');
-            const subprocess = moveBot(0,steps,bc.motorSpeed);
-            subprocess.stdout.on('data', (data) => {
-            console.log(`data:${data}`);
-            });
-            subprocess.stderr.on('data', (data) => {
-            console.log(`error:${data}`);
-            });
-            subprocess.stderr.on('close', () => {
-            //console.log("Closed");
-            if (callback != undefined) callback()
-            });
-
-        }
-    }
-
     /////////////////////////////////
     // DRAWING METHODS
 
