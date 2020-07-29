@@ -1,8 +1,23 @@
-import RPi.GPIO as GPIO
+import platform
+import re
+
+import imp
+try:
+    imp.find_module('RPi.GPIO')
+    import RPi.GPIO as GPIO
+except ImportError:
+    import FakeRPi.GPIO as GPIO
+
 import time
 # based on https://github.com/zxzhaixiang/Laser_engraver_system_RaspberryPI
 
+
 class Bipolar_Stepper_Motor:
+    
+    phase=0;
+    dir=0;
+    position=0;
+    
     def __init__(self,steppin, dirpin):
 
         GPIO.setmode(GPIO.BCM);

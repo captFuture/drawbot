@@ -2,7 +2,7 @@ from time import sleep
 import sys
 import motorControl
 from Bipolar_Stepper_Motor_Class import Bipolar_Stepper_Motor
-import RPi.GPIO as GPIO
+#import RPi.GPIO as GPIO
 
 #calculate synchronous drive
 lsteps = int(sys.argv[1])
@@ -14,5 +14,5 @@ MR=Bipolar_Stepper_Motor(19,6);
 
 motorControl.Motor_Step(ML, lsteps, MR, rsteps, speed);
 
-GPIO.cleanup();
+#GPIO.cleanup();
 print("true");
