@@ -15,7 +15,12 @@ const {parseSVG, makeAbsolute} = require('svg-path-parser');
 var arcToBezier = require('./arcToBezier');
 var svgpath = require('svgpath');
 
-const {spawn} = require('child_process')
+const SerialPort = require('serialport')
+const Readline = require('@serialport/parser-readline')
+const port = new SerialPort('/dev/USB0', {
+  baudRate: 57600
+})
+
 
 var currentX = 0;
 var currentY = 0;
@@ -216,10 +221,51 @@ var BotController = (cfg) => {
     }
     
 
+    bc.rotateBothESP = (lsteps, rsteps, ldir, rdir, callback) => {
+        // make steps positive or negative for movement
+        if(ldir == 0){
+            lsteps = lsteps*-1;
+        }else if(ldir == 1){
+            lsteps = lsteps;
+        }
+
+        if(rdir == 0){
+            rsteps = rsteps*-1;
+        }else if(rdir == 1){
+            rsteps = rsteps;
+        }
+        if(lsteps == -0){lsteps = 0};
+        if(rsteps == -0){rsteps = 0};
+                
+        console.log('moveBot(', lsteps, rsteps, bc.motorSpeed, bc.motorSpeed, ')');
+        if (callback != undefined) callback();
+    }
+    
+    bc.rotateESP = (motorIndex, dirIndex, delay, steps, callback) => {
+
+        if(motorIndex == 0){
+            if(dirIndex == 0){
+                steps = steps*-1;
+            }else if(dirIndex ==1){
+                steps = steps;
+            }
+            console.log('moveBot(', 0, steps, bc.motorSpeed, ')');
+            
+
+        }else if(motorIndex == 1){
+            if(dirIndex == 0){
+                steps = steps*-1;
+            }else if(dirIndex ==1){
+                steps = steps;
+            }
+            console.log('moveBot(', steps, 0, bc.motorSpeed, ')');
+            
+        }
+    }
+    
     // bc.rotateBoth takes the calculated steps and moves both motors
     // when both are finished the callback tells the function doRotation to go on (s1 and s2 are then taken)
-
-
+    
     bc.rotateBoth = (s1, s2, d1, d2, callback) => {
         console.log('--------------------  bc.rotateBoth: ', s1, s2, d1, d2)
         var steps = Math.round(Math.max(s1, s2))        // use biggest number of steps
@@ -237,17 +283,6 @@ var BotController = (cfg) => {
         var a2 = 0                                      // counter for steps on motor 2
         var stepped = 0
  
-        // TODO: integrate stepping based on A4988 library
-        /*var doStep = function () {
-            if (stepped < steps) {
-                stepped++
-
-            }else{
-                if (callback != undefined) callback() 
-            }
-        }
-        doStep() //executed once when bc.rotateBoth is called
-        */
         var doStep = function () {
             if (bc.paused != true) {
                 setTimeout(function () {
@@ -400,8 +435,6 @@ var BotController = (cfg) => {
         }
     }
 
-    //////////////////// END TODO:
-
     /////////////////////////////////
     // DRAWING METHODS
 
@@ -477,7 +510,8 @@ var BotController = (cfg) => {
         function doRotation() {
             // do the rotation!
             //bc.rotateBoth(ssteps1, ssteps2, sdir1, sdir2, callback)
-            bc.rotateBothPython(ssteps1, ssteps2, sdir1, sdir2, callback)
+            bc.rotateBothESP(ssteps1, ssteps2, sdir1, sdir2, callback)
+            
             // store new current steps
             bc.currentSteps[0] = s1
             bc.currentSteps[1] = s2
