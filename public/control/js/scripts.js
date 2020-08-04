@@ -58,8 +58,7 @@ function handleTouch(e) {
     console.log(data);
 }
 
-var pen = document.querySelector('#button_pen');
-pen.addEventListener('click', function (e) {
+penButton.addEventListener('click', function (e) {
     penz = !penz// swap pen position
     var data = {
         up: penz
@@ -69,13 +68,10 @@ pen.addEventListener('click', function (e) {
 
 
 homeButton.addEventListener('click', function(e) {
+    console.log("Set Home");
     var data = { x: 0, y: 0 };
-    socket.emit('moveto', data);
+    socket.emit('setH', data);
   });
-  
-  /*penButton.addEventListener('click', function(e) {
-      togglePen();
-  });*/
   
   folderButton.addEventListener('click', function(e) {
       toggleActiveState(folderButton);

@@ -29,11 +29,14 @@ var LocalServer = (cfg, controller) => {
         socket.on('pen',function(data){
             c.pen(data.up)
         })
+        socket.on('setH',function(data){
+            c.setH(data)
+        })
+
 
         socket.on('r', function (data) {
             c.rotateESP(Number(data.m), Number(data.dir), Number(data.d), Number(data.steps))
             //console.log(data.d, Number(data.x), Number(data.y))
-            //c.moveRelative(data.x, data.y)
         })
 
         socket.on('drawpath',function(data){
@@ -54,6 +57,8 @@ var LocalServer = (cfg, controller) => {
 			//console.log(fullpath.trim())
 
         })
+
+
         socket.on('setStartPos',function(data){
             c.setStartPos(data)
         })
@@ -108,24 +113,6 @@ var LocalServer = (cfg, controller) => {
         server.listen(config.localPort, function(){
             console.log('listening on port '+config.localPort+'...')
             console.log('preparing pen...')
-            
-
-            let pentest = new Promise(function(resolve,reject){
-                setTimeout(() => resolve(1),1000);
-            })
-            pentest.then(function(result) {
-                c.pen(1);
-                return result;
-            });
-            pentest.then(function(result) {
-                c.pen(0);
-                return result;
-            });
-            pentest.then(function(result) {
-                c.pen(1);
-                return result;
-            });
-
         })
     }
 

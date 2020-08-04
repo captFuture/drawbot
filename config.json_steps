@@ -4,12 +4,11 @@
   "localPort": 80,
   "baseDelay": 0,
   "serialport": "COM6",
-  "motorSpeed":1500,
+  "motorSpeed":600,
   "accelSpeed":300,
   "decelSpeed":200,
-  "lineFactor":2,
-  "moveFactor":6,
-  "curveFactor":1.5,
+  "lineFactor":3,
+  "curveFactor":3,
   "d": 990,
   "drawingScale": 100,
   "startPos": {
@@ -17,12 +16,12 @@
     "y": 318
   },
   "stepsPerMM": [
-    1,
-    1
+    19.6,
+    19.6
   ],
   "servo": {
-    "Min": 0,
-    "Max": 20,
+    "Min": 1400,
+    "Max": 1900,
     "swap": true
   },
   "penPauseDelay": 100,

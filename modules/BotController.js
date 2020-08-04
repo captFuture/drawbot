@@ -41,6 +41,10 @@ var BotController = (cfg) => {
 
     bc.motorSpeed = config.motorSpeed       // || 1000
     bc.accelSpeed = config.accelSpeed       // || 1000
+    bc.decelSpeed = config.decelSpeed       // || 1000
+    bc.lineFactor = config.lineFactor       // || 1000
+    bc.moveFactor = config.moveFactor       // || 1000
+    bc.curveFactor = config.curveFactor     // || 1000
 
     bc.stepsPerMM = config.stepsPerMM       // || [5000/500, 5000/500] // steps / mm
     bc.penPause = config.penPauseDelay      // || 200 // pause for pen up/down movement (in ms)
@@ -87,11 +91,24 @@ var BotController = (cfg) => {
 
     }
 
-    const port = new SerialPort(config.serialport, {baudRate: 57600, function (err) {
+    const port = new SerialPort(config.serialport, {baudRate: 115200, function (err) {
         if (err) {
           return console.log('Error: ', err.message)
         }
     }})
+    const parser = port.pipe(new Readline({ delimiter: '\n', encoding: 'ascii' }));
+
+    let serialString = 'G91;\n';
+    console.log(serialString);
+    port.write(serialString);
+    var waitForOk = (data) => {
+        console.log(data.toString());
+        if (data.toString().indexOf('ok') != -1) {
+          console.log("Move Relative");
+          port.off('data', waitForOk);
+        }
+      };
+    port.on('data', waitForOk);
 
     /////////////////////////////////
     // CONTROLLER VARIABLES
@@ -171,6 +188,33 @@ var BotController = (cfg) => {
         cfg.save()// save to local config.json file
     }
 
+    bc.setH = (data) => {
+        console.log("Setting Home");
+        console.log(data);
+        let serialString = 'G92'+'X0Y0;\n';
+        console.log(serialString);
+        port.write(serialString);
+        var waitForOk = (data) => {
+            console.log(data.toString());
+            if (data.toString().indexOf('ok') != -1) {
+            console.log("Move Relative");
+            port.off('data', waitForOk);
+            }
+        };
+        port.on('data', waitForOk);
+    }
+
+    bc.sendGcode = (serialString)=>{
+        port.write(serialString);
+            var waitForOk = (data) => {
+                //console.log(data.toString());
+                if (data.toString().indexOf('ok') != -1) {
+                  port.off('data', waitForOk);
+                }
+              };
+        port.on('data', waitForOk);
+    }
+
     bc.pen = (dir) => {
         bc.penPos = dir
         // 0=down, 1=up
@@ -185,15 +229,51 @@ var BotController = (cfg) => {
         if (dir == 1) {
             // lift pen up
             console.log('Pen: up ' + servoUpPos)
-            if (isPi()) { servo.servoWrite(servoUpPos) }
+            serialString = 'G90;\n'; // Set mode Absolute
+            //console.log(serialString);
+            bc.sendGcode(serialString);
+
+            //serialString = 'G00 '+'Z'+servoUpPos+'F10000;\n'; // send Pen state
+            serialString = 'Z'+servoUpPos+'\n'; // send Pen state
+            //console.log(serialString);
+            bc.sendGcode(serialString);
+
+            serialString = 'G91;\n'; // Set mode Relative
+            //console.log(serialString);
+            bc.sendGcode(serialString);
+
         } else if( dir == 0) {
             // put pen down
             console.log('Pen: down ' + servoDnPos)
-            if (isPi()) { servo.servoWrite(servoDnPos) }
+            serialString = 'G90;\n'; // Set mode Absolute
+            //console.log(serialString);
+            bc.sendGcode(serialString);
+
+            //serialString = 'G00 '+'Z'+servoDnPos+'F10000;\n'; // send Pen state
+            serialString = 'Z'+servoDnPos+'\n'; // send Pen state
+            //console.log(serialString);
+            bc.sendGcode(serialString);
+
+            serialString = 'G91;\n'; // Set mode Relative
+            //console.log(serialString);
+            bc.sendGcode(serialString);
+
         } else {
 			// lift pen up
             console.log('Pen: up ' + servoUpPos)
-            if (isPi()) { servo.servoWrite(servoUpPos) }
+            serialString = 'G90;\n'; // Set mode Absolute
+            //console.log(serialString);
+            bc.sendGcode(serialString);
+
+            //serialString = 'G00 '+'Z'+servoUpPos+'F10000;\n'; // send Pen state
+            serialString = 'Z'+servoUpPos+'\n'; // send Pen state
+            //console.log(serialString);
+            bc.sendGcode(serialString);
+
+            serialString = 'G91;\n'; // Set mode Relative
+            //console.log(serialString);
+            bc.sendGcode(serialString);
+
         }
         if (bc.localio){
             bc.localio.emit('penState', Number(dir))
@@ -212,22 +292,10 @@ var BotController = (cfg) => {
         }
     }
 
-    //////////////////// TODO: change this to a wave function with pigpio
+    bc.rotateBothESP = (X, Y, lsteps, rsteps, ldir, rdir, motorSpeed, motorAccel, motorDecel, callback) => {
+    //bc.rotateBothESP(ssteps1, ssteps2, sdir1, sdir2, accel, decel, callback)
 
-    bc.makeStep = (m, d) => {
-        // console.log('step',d)
-        if (bc._DIRSWAP) d = !d
-        if (isPi()) { dirPins[m].digitalWrite(d) }
-        if (isPi()) { stepPins[m].digitalWrite(1) }
-        if (isPi()) { 
-            setTimeout(function () {
-                if (isPi()) { stepPins[m].digitalWrite(0) }
-            }, 1)
-        }
-    }
-    
-
-    bc.rotateBothESP = (lsteps, rsteps, ldir, rdir, callback) => {
+        //console.log(motorDecel);
         // make steps positive or negative for movement
         if(ldir == 1){
             lsteps = lsteps*-1;
@@ -235,43 +303,53 @@ var BotController = (cfg) => {
             lsteps = lsteps;
         }
 
-        if(rdir == 0){
+        if(rdir == 1){
             rsteps = rsteps*-1;
-        }else if(rdir == 1){
+        }else if(rdir == 0){
             rsteps = rsteps;
         }
         if(lsteps == -0){lsteps = 0};
         if(rsteps == -0){rsteps = 0};
                 
-        console.log('moveBot(', lsteps, rsteps, bc.motorSpeed, bc.accelSpeed, ')');
-
-        let serialString = 'move '+lsteps+' '+rsteps+' '+bc.motorSpeed+' '+bc.accelSpeed+'\n';
-        /*port.write(serialString, function(err) {
-            if (err) {
-              return console.log('Error on write: ', err.message)
+        //console.log('moveBot(', lsteps, rsteps, bc.motorSpeed, bc.accelSpeed, ')');
+        //let serialString = 'move '+lsteps+' '+rsteps+' '+motorSpeed+' '+motorAccel+' '+motorDecel+'\n';
+        let serialString = 'G01 '+'X'+lsteps+'Y'+rsteps+'F'+motorSpeed+';\n'; // GRBL with kinematics in node
+        //let serialString = 'G01 '+'X'+X+'Y'+Y+'F'+motorSpeed+';\n'; // GRBL with kinematics in GRBL
+        console.log(serialString);
+        port.write(serialString);
+        var waitForOk = (data) => {
+            //console.log(data.toString());
+            if (data.toString().indexOf('ok') != -1) {
+              //console.log("Callback->");
+              if (callback!=undefined) callback()
+              port.off('data', waitForOk);
             }
-            //console.log('moved: '+serialString);
-        })*/
-
+          };
+        port.on('data', waitForOk);
     }
     
     bc.rotateESP = (motorIndex, dirIndex, delay, steps, callback) => {
-
         if(motorIndex == 1){ // right Motor
-            if(dirIndex == 0){
+            if(dirIndex == 1){
                 steps = steps*-1;
-            }else if(dirIndex == 1){
+            }else if(dirIndex == 0){
                 steps = steps;
             }
-            //console.log('moveBot(', 0, steps, bc.motorSpeed, bc.accelSpeed, ')');
-            console.log("rightMotor");
-            let serialString = 'move '+'0 '+steps+' '+bc.motorSpeed+' '+bc.accelSpeed+'\n';
-            port.write(serialString, function(err) {
-                if (err) {
-                  return console.log('Error on write: ', err.message)
+            //console.log('moveBot(', 0, steps, bc.motorSpeed, bc.accelSpeed, bc.decelSpeed,')');
+            //console.log("rightMotor");
+            //let serialString = 'move '+'0 '+steps+' '+bc.motorSpeed+' '+bc.accelSpeed+' '+bc.decelSpeed+'\n'; //own implementation
+            let serialString = 'G00 '+'Y'+steps/10+';\n'; // GRBL with kinematics in node
+            console.log(serialString);
+            port.write(serialString);
+            var waitForOk = (data) => {
+                console.log(data.toString());
+                if (data.toString().indexOf('ok') != -1) {
+                  //console.log("Callback->");
+                  if (callback!=undefined) callback()
+                  port.off('data', waitForOk);
                 }
-                console.log('> '+serialString);
-            })
+              };
+            port.on('data', waitForOk);
 
         }else if(motorIndex == 0){ // left Motor
             if(dirIndex == 1){
@@ -279,16 +357,21 @@ var BotController = (cfg) => {
             }else if(dirIndex == 0){
                 steps = steps;
             }
-            //console.log('moveBot(', steps, 0, bc.motorSpeed,bc.motorSpeed, ')');
-            console.log("leftMotor");
-            let serialString = 'move '+steps+' '+'0 '+bc.motorSpeed+' '+bc.accelSpeed+'\n';
-            
-            port.write(serialString, function(err) {
-                if (err) {
-                  return console.log('Error on write: ', err.message)
+            //console.log('moveBot(', steps, 0, bc.motorSpeed, bc.accelSpeed, bc.decelSpeed,')');
+            //console.log("leftMotor");
+            //let serialString = 'move '+steps+' '+'0 '+bc.motorSpeed+' '+bc.accelSpeed+' '+bc.decelSpeed+'\n';
+            let serialString = 'G00 '+'X'+steps/10+';\n';
+            console.log(serialString);
+            port.write(serialString);
+            var waitForOk = (data) => {
+                console.log(data.toString());
+                if (data.toString().indexOf('ok') != -1) {
+                  //console.log("Callback->");
+                  if (callback!=undefined) callback()
+                  port.off('data', waitForOk);
                 }
-                console.log('> '+serialString);
-            })
+              };
+            port.on('data', waitForOk);
 
         }
     }
@@ -296,34 +379,25 @@ var BotController = (cfg) => {
     /////////////////////////////////
     // DRAWING METHODS
 
-    bc.moveRelative = (x, y, callback, penDir = 1) => {
-        console.log('---------- bc.moveRelative', x, y, ' ----------')
-        var tox = Number(bc.pos.x) + Number(x)
-        var toy = Number(bc.pos.y) + Number(y)
-        bc.moveTo(Number(tox), Number(toy), callback, 1)
-    }
-
-    bc.moveTo = (x, y, callback, penDir = 1) => {
+    bc.moveTo = (x, y, speed, accel, decel, callback, penDir = 1) => { 
         var x = Math.round(x);
         var y = Math.round(y);
 
         //console.log('---------- bc.moveTo', x, y, ' ----------')
-        if (x == 0 && y == 0) {
-            console.log("-------> homing <-------")
-        }
+
         // convert x,y to l1,l2 (ideal, precise string lengths)
-        // L1 = Math.sqrt( Math.pow(y,2) + Math.pow(x+d/2, 2));
-        // L2 = Math.sqrt( Math.pow(y,2) + Math.pow(x-d/2, 2));
+        // L1 = Math.sqrt( Math.pow(x,2) + Math.pow(y, 2));
+        // L2 = Math.sqrt( Math.pow((d-x),2) + Math.pow(y, 2));
 
         // Inverse kinematics 
-        // L1 = Math.sqrt(X² + Y²)
-        // L2 = Math.sqrt((d - X)² + Y²)
+        // L1 = Math.sqrt(x² + y²);
+        // L2 = Math.sqrt((d - x)² + y²);
 
         var X = Math.round(x + bc.startPos.x);
         var Y = Math.round(y + bc.startPos.y);
-
-        var X2 = X * X
-        var Y2 = Y * Y
+        
+        var X2 = X * X;
+        var Y2 = Y * Y;
 
         var DsubX = bc._D - X
         var DsubX2 = DsubX * DsubX
@@ -332,13 +406,9 @@ var BotController = (cfg) => {
         L2 = Math.sqrt(DsubX2 + Y2)
 
         // console.log('L:',L1,L2)
-
         // convert string lengths to motor steps (float to int)
-
         var s1 = Math.round(L1 * bc.stepsPerMM[0])
         var s2 = Math.round(L2 * bc.stepsPerMM[1])
-        
-        // console.log('s:',s1,s2)
         // console.log('bc.currentSteps:',bc.currentSteps[0],bc.currentSteps[1])
 
         // get difference between target steps and current steps (+/- int)
@@ -356,19 +426,9 @@ var BotController = (cfg) => {
         var ssteps2 = Math.abs(sd2)
         // console.log('ssteps:',ssteps1,ssteps2)
 
-        // convert step differences to degree movement
-        //var deg1 = (ssteps1 * 0.225).toFixed(2);
-        //var deg2 = (ssteps2 * 0.225).toFixed(2);
-        //var degdir1 = (sd1 > 0) ? "-" : "+"
-        //var degdir2 = (sd2 > 0) ? "+" : "-"
-
-        //console.log("Degrees Rotate | l: "+degdir1+""+deg1+" | r: "+degdir2+""+deg2);
-
-
         function doRotation() {
-            // do the rotation!
-            //bc.rotateBoth(ssteps1, ssteps2, sdir1, sdir2, callback)
-            bc.rotateBothESP(ssteps1, ssteps2, sdir1, sdir2, callback)
+            //bc.rotateBoth(ssteps1, ssteps2, sdir1, sdir2, acc, dec, callback)
+            bc.rotateBothESP(X, Y, ssteps1, ssteps2, sdir1, sdir2, speed, accel, decel, callback)
             
             // store new current steps
             bc.currentSteps[0] = s1
@@ -381,8 +441,8 @@ var BotController = (cfg) => {
     doRotation()
     }
 
-    bc.lineTo = (x, y, callback) => {
-        bc.moveTo(Number(x), Number(y), callback, 0)// 0 makes bc.moveTo happen with pen down instead of up
+    bc.lineTo = (x, y, s, a, d, callback) => {
+        bc.moveTo(Number(x), Number(y), Number(s), Number(a), Number(d), callback, 0) // 0 makes bc.moveTo happen with pen down instead of up
     }
 
 
@@ -447,7 +507,8 @@ var BotController = (cfg) => {
             bc.drawPath(bc.paths.shift())
         } else {
             console.log("Done drawing all the paths. :)")
-            bc.moveTo(0,0);
+            moveFactor = bc.moveFactor;
+            bc.moveTo(0, 0, bc.motorSpeed*moveFactor, bc.accelSpeed, bc.decelSpeed)
         }
     }
 
@@ -458,11 +519,11 @@ var BotController = (cfg) => {
         var drawingScale = config.drawingScale/100;
         console.log("drawingScale: "+drawingScale);
 
-        //if(drawingScale != 1){
-        //    var transformed = svgpath(pathString).scale(drawingScale).toString();
-        //}else{
-        //    var transformed = pathString;
-        //}
+        if(drawingScale != 1){
+            var transformed = svgpath(pathString).scale(drawingScale).toString();
+        }else{
+            var transformed = pathString;
+        }
 
         var commands = parseSVG(pathString);
 		makeAbsolute(commands);
@@ -484,8 +545,8 @@ var BotController = (cfg) => {
                     var cmd = commands[cmdIndex]
                     var cmdCode = cmd.code
 
-                    console.log("Command-index: " + cmdIndex);
-                    console.log("Command-count: " + cmdCount);
+                    //console.log("Command-index: " + cmdIndex);
+                    //console.log("Command-count: " + cmdCount);
 
                     var tox = checkValue(bc.pos.x)
                     var toy = checkValue(bc.pos.y)
@@ -519,30 +580,57 @@ var BotController = (cfg) => {
                             // absolute move
                             tox = checkValue(Number(cmd.x))
                             toy = checkValue(Number(cmd.y))
+
+                            moveFactor = bc.moveFactor;
+                            moveSpeed = bc.motorSpeed*moveFactor;
+                            moveAcc = bc.accelSpeed;
+                            moveDec = bc.decelSpeed;
+                            console.log('-------------MOVE');
                             bc.penThen(1, function () { // 0=down, 1=up
-                                bc.moveTo(Number(tox), Number(toy), doCommand)
+                                bc.moveTo(Number(tox), Number(toy), moveSpeed, moveAcc, moveDec, doCommand)
                             })
                             break
                         case 'L':
                             // absolute line
                             tox = checkValue(Number(cmd.x))
                             toy = checkValue(Number(cmd.y))
+                            console.log('-------------LINE');
+
+                            lineFactor = bc.lineFactor;
+                            lineSpeed = bc.motorSpeed*lineFactor;
+                            lineAcc = bc.accelSpeed;
+                            lineDec = bc.decelSpeed;
+
                             bc.penThen(0, function () { // 0=down, 1=up
-                                bc.lineTo(Number(tox), Number(toy), doCommand)
+                                bc.lineTo(Number(tox), Number(toy), lineSpeed, lineAcc, lineDec, doCommand)
                             })
                             break
                         case 'H':
                             // absolute horizontal line
                             tox = checkValue(Number(cmd.x))
+                            console.log('-------------HLINE');
+
+                            lineFactor = bc.lineFactor;
+                            lineSpeed = bc.motorSpeed*lineFactor;
+                            lineAcc = bc.accelSpeed;
+                            lineDec = bc.decelSpeed;
+
                             bc.penThen(0, function () { // 0=down, 1=up
-                                bc.lineTo(Number(tox), Number(toy), doCommand)
+                                bc.lineTo(Number(tox), Number(toy), lineSpeed, lineAcc, lineDec, doCommand)
                             })
                             break
                         case 'V':
                             // absolute vertical line
                             toy = checkValue(Number(cmd.y))
+                            console.log('-------------VLINE');
+
+                            lineFactor = bc.lineFactor;
+                            lineSpeed = bc.motorSpeed*lineFactor;
+                            lineAcc = bc.accelSpeed;
+                            lineDec = bc.decelSpeed;
+
                             bc.penThen(0, function () { // 0=down, 1=up
-                                bc.lineTo(Number(tox), Number(toy), doCommand)
+                                bc.lineTo(Number(tox), Number(toy), lineSpeed, lineAcc, lineDec, doCommand)
                             })
                             break
                         case 'C':
@@ -663,8 +751,14 @@ var BotController = (cfg) => {
                         case 'Z':
                             tox = checkValue(Number(cmd.x))
                             toy = checkValue(Number(cmd.y))
+
+                            lineFactor = bc.lineFactor;
+                            lineSpeed = bc.motorSpeed*lineFactor;
+                            lineAcc = bc.accelSpeed;
+                            lineDec = bc.decelSpeed;
+
                             bc.penThen(0, function () { // 0=down, 1=up
-                                bc.lineTo(tox, toy, doCommand)
+                                bc.lineTo(Number(tox), Number(toy), lineSpeed, lineAcc, lineDec, doCommand)
                             })
                             break
                     }
@@ -680,13 +774,6 @@ var BotController = (cfg) => {
                         bc.drawNextPath()
                     })
                 }
-            /*}else{
-                console.log("--- paused:");
-                console.log(bc.paused);
-                console.log("Command-index: " + cmdIndex);
-                console.log("Command-count: " + cmdCount);
-                //doCommand();
-            }*/
         }
         doCommand()
     }
@@ -694,6 +781,7 @@ var BotController = (cfg) => {
     bc.drawArc = (curves, callback) => {
         var n = 0
         var cCount = curves.length
+        console.log('-------------drawArc');
         function doCommand() {
             if (n < cCount) {
                 var crv = curves[n]
@@ -715,10 +803,15 @@ var BotController = (cfg) => {
         var n = 0// curret bezier step in iteration
         var pts = cBezier(points[0], points[1], points[2], points[3], scale)
         var ptCount = pts.length
+        console.log('-------------drawCubicBezier');
         function doCommand() {
             if (n < ptCount) {
                 var pt = pts[n]
-                bc.lineTo(Number(pt[0]), Number(pt[1]), doCommand)
+                curveFactor = bc.curveFactor;
+                curveSpeed = bc.motorSpeed*curveFactor;
+                lineAcc = bc.accelSpeed;
+                lineDec = bc.decelSpeed;
+                bc.lineTo(Number(pt[0]), Number(pt[1]), curveSpeed, lineAcc, lineDec, doCommand)
                 n++
             } else {
                 // console.log('bezier done!')
@@ -731,10 +824,15 @@ var BotController = (cfg) => {
         var n = 0// curret bezier step in iteration
         var pts = qBezier(points[0], points[1], points[2], scale)
         var ptCount = pts.length
+        console.log('-------------drawQuadraticBezier');
         function doCommand() {
             if (n < ptCount) {
                 var pt = pts[n]
-                bc.lineTo(Number(pt[0]), Number(pt[1]), doCommand)
+                curveFactor = bc.curveFactor;
+                curveSpeed = bc.motorSpeed*curveFactor;
+                lineAcc = bc.accelSpeed;
+                lineDec = bc.decelSpeed;
+                bc.lineTo(Number(pt[0]), Number(pt[1]), curveSpeed, lineAcc, lineDec, doCommand)
                 n++
             } else {
                 // console.log('bezier done!')
