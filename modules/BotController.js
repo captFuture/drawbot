@@ -10,7 +10,6 @@ var Ymax = 0;
 var cBezier = require('adaptive-bezier-curve')
 var qBezier = require('adaptive-quadratic-curve')
 var svgpath = require('svgpath');
-var svgDim = require('svg-dimensions');
 const path = require('path');
 const fs = require('fs');
 const { parseSVG, makeAbsolute } = require('svg-path-parser');
@@ -25,11 +24,8 @@ var currentY = 0;
 var cmdIndex = 0;
 
 var BotController = (cfg) => {
-
     var bc = {}
     var config = cfg.data
-
-
     /////////////////////////////////
     // MAIN SETUP VARIABLES
     bc._BOT_ID = config.botID               // || 'two'
@@ -130,7 +126,6 @@ var BotController = (cfg) => {
     bc.paths = []
     bc.drawingPath = false
 
-
     /////////////////////////////////
     // LIMIT SWITCHES FOR AUTOMATIC HOMING
 
@@ -139,7 +134,6 @@ var BotController = (cfg) => {
     } else {
 
     }
-
 
     /////////////////////////////////
     // HARDWARE METHODS
@@ -157,11 +151,10 @@ var BotController = (cfg) => {
         // L1 = Math.sqrt(x² + y²);
         // L2 = Math.sqrt((d - x)² + y²);
         bc.startStringLengths = [
-            Math.sqrt(Math.pow((bc._D / 2), 2) + Math.pow(bc.startPos.y, 2)),
+            Math.sqrt(Math.pow((bc._D / 2), 2) + Math.pow((bc._D / 2), 2)),
             Math.sqrt(Math.pow((bc._D / 2), 2) + Math.pow(bc.startPos.y, 2))
         ]
         bc.stringLengths = [bc.startStringLengths[0], bc.startStringLengths[1]];
-        //console.log(bc.stringLengths);
         bc.startSteps = [Math.round(bc.stringLengths[0] * bc.stepsPerMM[0]), Math.round(bc.stringLengths[1] * bc.stepsPerMM[1])]
         bc.currentSteps = [bc.startSteps[0], bc.startSteps[1]]
 
@@ -302,8 +295,6 @@ var BotController = (cfg) => {
 
     bc.rotateBothESP = (x, y, lsteps, rsteps, ldir, rdir, motorSpeed, motorAccel, motorDecel, callback) => {
         //bc.rotateBothESP(ssteps1, ssteps2, sdir1, sdir2, accel, decel, callback)
-
-        //console.log(motorDecel);
         // make steps positive or negative for movement
         if (ldir == 1) {
             lsteps = lsteps * -1;
@@ -317,15 +308,12 @@ var BotController = (cfg) => {
             rsteps = rsteps;
         }
 
-
         //console.log('moveBot(', lsteps, rsteps, bc.motorSpeed, bc.accelSpeed, ')');
-        //let serialString = 'move '+lsteps+' '+rsteps+' '+motorSpeed+' '+motorAccel+' '+motorDecel+'\n';
         let serialString = 'G01 ' + 'X' + lsteps + 'Y' + rsteps + 'F' + motorSpeed + ';\n'; // GRBL with kinematics in node
-        //let serialString = 'G01 '+'X'+X+'Y'+Y+'F'+motorSpeed+';\n'; // GRBL with kinematics in GRBL
-        console.log(serialString);
+        //console.log(serialString);
         port.write(serialString);
         var waitForOk = (data) => {
-            console.log(data.toString());
+            //console.log(data.toString());
             if ((data.toString().indexOf('o') != -1) && (!(data.toString().indexOf('error')) != -1)) {
                 //console.log("Callback->");
                 if (callback != undefined) callback()
@@ -398,7 +386,7 @@ var BotController = (cfg) => {
         //var Xmax = 200;
         //var Ymax = 200;
 
-        var XminPos = bc.startPos.x - (Xmax / 2);
+        var XminPos = bc._D / 2 - (Xmax / 2);
         var YminPos = bc.startPos.y;
 
         var destX = x + XminPos;
@@ -447,12 +435,10 @@ var BotController = (cfg) => {
         bc.moveTo(Number(x), Number(y), Number(s), Number(a), Number(d), callback, 0) // 0 makes bc.moveTo happen with pen down instead of up
     }
 
-
     bc.addPath = (pathString) => {
         console.log('bc.addPath')
         bc.paths.push(pathString)
         console.log('pathcount: ', bc.paths.length)
-
 
         if (bc.paths.length == 1 && bc.drawingPath == false) {
             bc.drawNextPath()
@@ -460,19 +446,10 @@ var BotController = (cfg) => {
     }
 
     bc.pause = () => {
-        bc.paused = !(bc.paused != false)
-        console.log("paused: ", bc.paused)
-        if (bc.paused) {
-            // bc.drawPath.doCommand();
-        }
-        //bc.paused = true
+
     }
 
     bc.filelist = (filepath, order, limit) => {
-        //console.log(filepath);
-        //console.log(order);
-        //console.log(limit);
-
         var drewiefiles = [];
         const directoryPath = path.join(__dirname, filepath);
         fs.readdir(directoryPath, function (err, files) {
@@ -487,11 +464,9 @@ var BotController = (cfg) => {
                 drewiefiles
             })
         });
-
     }
 
     bc.clearcanvas = () => {
-        // Todo stopping, moving to home position and clearing input
         bc.penThen(1, function () { // 0=down, 1=up
             console.log("Homing and Clearing...")
         })
@@ -517,7 +492,6 @@ var BotController = (cfg) => {
     }
 
     bc.drawPath = (pathString) => {
-
         bc.drawingPath = true
         console.log('generating path...')
         var drawingScale = config.drawingScale / 100;
@@ -559,15 +533,9 @@ var BotController = (cfg) => {
         }
 
         function doCommand() {
-            //if(!bc.paused){
-            // console.log("--- paused:");
-            //console.log(bc.paused);
             if (cmdIndex < cmdCount) {
                 var cmd = commands[cmdIndex]
                 var cmdCode = cmd.code
-
-                //console.log("Command-index: " + cmdIndex);
-                //console.log("Command-count: " + cmdCount);
 
                 var tox = checkValue(bc.pos.x)
                 var toy = checkValue(bc.pos.y)

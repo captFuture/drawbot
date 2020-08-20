@@ -1,4 +1,3 @@
-
 // LOCAL SERVER
 // LocalServer.js
 
@@ -36,7 +35,6 @@ var LocalServer = (cfg, controller) => {
 
         socket.on('r', function (data) {
             c.rotateESP(Number(data.m), Number(data.dir), Number(data.d), Number(data.steps))
-            //console.log(data.d, Number(data.x), Number(data.y))
         })
 
         socket.on('drawpath',function(data){
@@ -54,8 +52,6 @@ var LocalServer = (cfg, controller) => {
             c.paths = []
             c.drawingPath = false
             c.addPath(fullpath.trim())
-			//console.log(fullpath.trim())
-
         })
 
 
@@ -77,7 +73,6 @@ var LocalServer = (cfg, controller) => {
         })
 
         socket.on('filelist',function(data){
-            //console.log(data);
             c.filelist(data.folder, data.order, data.limit)
         })
         
@@ -104,9 +99,6 @@ var LocalServer = (cfg, controller) => {
         socket.on('clearCanvas', function(data){
             c.clearcanvas()
         })
-
-
-
     })
 
     ls.start = () => {
@@ -115,7 +107,6 @@ var LocalServer = (cfg, controller) => {
             console.log('preparing pen...')
         })
     }
-
     return ls
 }
 module.exports = LocalServer

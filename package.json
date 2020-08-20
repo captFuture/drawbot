@@ -26,7 +26,6 @@
     "serialport": "^9.0.0",
     "socket.io": "^2.0.2",
     "socket.io-client": "^2.0.3",
-    "svg-dimensions": "^1.0.2",
     "svg-path-parser": "^1.1.0",
     "svgpath": "^2.3.0"
   }

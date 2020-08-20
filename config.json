@@ -4,7 +4,7 @@
   "localPort": 80,
   "baseDelay": 0,
   "serialport": "COM6",
-  "motorSpeed": 1500,
+  "motorSpeed": 1000,
   "accelSpeed": 300,
   "decelSpeed": 200,
   "lineFactor": 2,
